@@ -38,14 +38,14 @@ def cari_osm(nama_pesantren, kecamatan, kabupaten):
             kemiripan = fuzz.partial_ratio(str(nama_pesantren).lower(), str(nama_osm).lower())
             
             if kemiripan > 75:
-                return {"lat": lat, "lon": lon, "jalan": jalan, "desa": desa, "sumber": "OSM"}
+                return {"lat": lat, "lon": lon, "jalan": jalan, "desa": desa, "kecamatan": "", "sumber": "OSM"}
             else:
-                return {"lat": None, "lon": None, "jalan": "", "desa": "", "sumber": "OSM (Nama Tidak Cocok)"}
+                return {"lat": None, "lon": None, "jalan": "", "desa": "", "kecamatan": "", "sumber": "OSM (Nama Tidak Cocok)"}
         else:
-            return {"lat": None, "lon": None, "jalan": "", "desa": "", "sumber": "Tidak Ditemukan di OSM"}
+            return {"lat": None, "lon": None, "jalan": "", "desa": "", "kecamatan": "", "sumber": "Tidak Ditemukan di OSM"}
             
     except Exception as e:
-        return {"lat": None, "lon": None, "jalan": "", "desa": "", "sumber": "Error API"}
+        return {"lat": None, "lon": None, "jalan": "", "desa": "", "kecamatan": "", "sumber": "Error API"}
 
 # ==========================================
 # 2. UI STREAMLIT
@@ -69,7 +69,7 @@ if uploaded_file is not None:
         st.write("**Preview Data Awal:**")
         st.dataframe(df.head())
 
-        kolom_wajib = ['NSPP', 'Nama_Pesantren', 'Kecamatan', 'Kabupaten']
+        kolom_wajib = ['PROVINSI','KABUPATEN', 'NO.STATISTIK', 'NAMA LEMBAGA']
         kolom_ada = all(kolom in df.columns for kolom in kolom_wajib)
 
         if not kolom_ada:
@@ -84,10 +84,10 @@ if uploaded_file is not None:
                 status_text = st.empty()
 
                 for index, row in df.iterrows():
-                    nspp = str(row['NSPP']).strip()
-                    nama = str(row['Nama_Pesantren']).strip()
-                    kec = str(row['Kecamatan']).strip()
-                    kab = str(row['Kabupaten']).strip()
+                    PROV = str(row['PROVINSI']).strip()
+                    kab = str(row['KABUPATEN']).strip()
+                    nspp = str(row['NO.STATISTIK']).strip()
+                    nama = str(row['NAMA LEMBAGA']).strip()
                     
                     status_text.text(f"Memproses {index + 1}/{total_data}: {nama}...")
                     
@@ -95,11 +95,11 @@ if uploaded_file is not None:
                     data_nspp = cari_data_via_nspp(nspp)
                     
                     if data_nspp:
-                        jalan, desa, sumber = data_nspp['jalan'], data_nspp['desa'], "Database Resmi / NSPP"
+                        jalan, desa, sumber = data_nspp['jalan'], data_nspp['desa'], data_nspp['kec'],"Database Resmi / NSPP"
                         lat, lon = None, None 
                     else:
                         data_osm = cari_osm(nama, kec, kab)
-                        jalan, desa = data_osm['jalan'], data_osm['desa']
+                        jalan, desa = data_osm['jalan'], data_osm['desa'], data_osm['kecamatan']
                         lat, lon = data_osm['lat'], data_osm['lon']
                         sumber = data_osm['sumber']
                         time.sleep(1) # Rate limit OSM
@@ -108,6 +108,7 @@ if uploaded_file is not None:
                     baris_hasil.update({
                         "Jalan_Ditemukan": jalan,
                         "Desa_Ditemukan": desa,
+                        "Kecamatan_Ditemukan": kecamatan,
                         "Latitude": lat,
                         "Longitude": lon,
                         "Sumber_Data": sumber
