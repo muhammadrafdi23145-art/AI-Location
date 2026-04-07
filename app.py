@@ -69,7 +69,7 @@ if uploaded_file is not None:
         st.write("**Preview Data Awal:**")
         st.dataframe(df.head())
 
-        kolom_wajib = ['PROVINSI','KABUPATEN', 'NO.STATISTIK', 'NAMA LEMBAGA']
+        kolom_wajib = ['PROVINSI','KOTA/KAB.', 'NO.STATISTIK', 'NAMA LEMBAGA']
         kolom_ada = all(kolom in df.columns for kolom in kolom_wajib)
 
         if not kolom_ada:
@@ -85,7 +85,7 @@ if uploaded_file is not None:
 
                 for index, row in df.iterrows():
                     PROV = str(row['PROVINSI']).strip()
-                    kab = str(row['KABUPATEN']).strip()
+                    kab = str(row['KOTA/KAB.']).strip()
                     nspp = str(row['NO.STATISTIK']).strip()
                     nama = str(row['NAMA LEMBAGA']).strip()
                     
