@@ -17,7 +17,7 @@ def cari_data_via_nspp(nspp):
     return mock_db.get(str(nspp), None)
 
 def cari_osm(nama_pesantren, kecamatan, kabupaten):
-    headers = {'User-Agent': 'AplikasiGeocodingPesantren/1.0 (emailanda@example.com)'}
+    headers = {'User-Agent': 'AplikasiGeocodingPesantren/1.0 (uinc2025.id@gmail.com)'}
     # Jika kecamatan tidak ada, cari hanya berdasarkan nama dan kabupaten
     query = f"{nama_pesantren}, {kecamatan}, {kabupaten}" if kecamatan else f"{nama_pesantren}, {kabupaten}"
     url = f"https://nominatim.openstreetmap.org/search?q={query}&format=json&addressdetails=1&limit=3"
