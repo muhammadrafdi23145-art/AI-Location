@@ -11,14 +11,15 @@ from rapidfuzz import fuzz
 def cari_data_via_nspp(nspp):
     # Simulasi database internal Kemenag
     mock_db = {
-        "12345": {"jalan": "Jl. Kyai Haji Hasyim Ashari No. 10", "desa": "Karanganyar"},
-        "67890": {"jalan": "Jl. Raya Bogor KM 30", "desa": "Cimanggis"}
+        "12345": {"jalan": "Jl. Kyai Haji Hasyim Ashari No. 10", "desa": "Karanganyar", "kec": "Karanganyar"},
+        "67890": {"jalan": "Jl. Raya Bogor KM 30", "desa": "Cimanggis", "kec": "Cimanggis"}
     }
     return mock_db.get(str(nspp), None)
 
 def cari_osm(nama_pesantren, kecamatan, kabupaten):
     headers = {'User-Agent': 'AplikasiGeocodingPesantren/1.0 (emailanda@example.com)'}
-    query = f"{nama_pesantren}, {kecamatan}, {kabupaten}"
+    # Jika kecamatan tidak ada, cari hanya berdasarkan nama dan kabupaten
+    query = f"{nama_pesantren}, {kecamatan}, {kabupaten}" if kecamatan else f"{nama_pesantren}, {kabupaten}"
     url = f"https://nominatim.openstreetmap.org/search?q={query}&format=json&addressdetails=1&limit=3"
     
     try:
@@ -33,12 +34,13 @@ def cari_osm(nama_pesantren, kecamatan, kabupaten):
             
             jalan = alamat_detail.get('road', '')
             desa = alamat_detail.get('village', alamat_detail.get('suburb', ''))
+            kec_ditemukan = alamat_detail.get('county', alamat_detail.get('city_district', '')) # Ekstrak kecamatan dari OSM
             nama_osm = hasil_terbaik.get('name', '')
             
             kemiripan = fuzz.partial_ratio(str(nama_pesantren).lower(), str(nama_osm).lower())
             
             if kemiripan > 75:
-                return {"lat": lat, "lon": lon, "jalan": jalan, "desa": desa, "kecamatan": "", "sumber": "OSM"}
+                return {"lat": lat, "lon": lon, "jalan": jalan, "desa": desa, "kecamatan": kec_ditemukan, "sumber": "OSM"}
             else:
                 return {"lat": None, "lon": None, "jalan": "", "desa": "", "kecamatan": "", "sumber": "OSM (Nama Tidak Cocok)"}
         else:
@@ -89,18 +91,27 @@ if uploaded_file is not None:
                     nspp = str(row['NO.STATISTIK']).strip()
                     nama = str(row['NAMA LEMBAGA']).strip()
                     
+                    # Mengambil kecamatan jika kolomnya ada di DataFrame, jika tidak kosongkan
+                    kec = str(row['KECAMATAN']).strip() if 'KECAMATAN' in df.columns else ""
+                    
                     status_text.text(f"Memproses {index + 1}/{total_data}: {nama}...")
                     
                     # Logika pencarian
                     data_nspp = cari_data_via_nspp(nspp)
                     
                     if data_nspp:
-                        jalan, desa, sumber = data_nspp['jalan'], data_nspp['desa'], data_nspp['kec'],"Database Resmi / NSPP"
+                        jalan = data_nspp['jalan']
+                        desa = data_nspp['desa']
+                        kecamatan_ditemukan = data_nspp['kec']
+                        sumber = "Database Resmi / NSPP"
                         lat, lon = None, None 
                     else:
                         data_osm = cari_osm(nama, kec, kab)
-                        jalan, desa = data_osm['jalan'], data_osm['desa'], data_osm['kecamatan']
-                        lat, lon = data_osm['lat'], data_osm['lon']
+                        jalan = data_osm['jalan']
+                        desa = data_osm['desa']
+                        kecamatan_ditemukan = data_osm['kecamatan']
+                        lat = data_osm['lat']
+                        lon = data_osm['lon']
                         sumber = data_osm['sumber']
                         time.sleep(1) # Rate limit OSM
                         
@@ -108,7 +119,7 @@ if uploaded_file is not None:
                     baris_hasil.update({
                         "Jalan_Ditemukan": jalan,
                         "Desa_Ditemukan": desa,
-                        "Kecamatan_Ditemukan": kecamatan,
+                        "Kecamatan_Ditemukan": kecamatan_ditemukan,
                         "Latitude": lat,
                         "Longitude": lon,
                         "Sumber_Data": sumber
